@@ -7,6 +7,13 @@
     (:import goog.History))
 
 ;; -------------------------
+;; State
+(defonce user-data
+  (atom
+    {:name "Colin"
+     :id "6ca2e9c0-f4ed-11e4-b443-353a40402a60"}))
+
+;; -------------------------
 ;; Views
 
 (defn navbar []
@@ -17,7 +24,8 @@
     [:div {:id "navbar" :class "collapse navbar-collapse"}
      [:ul {:class "nav navbar-nav"}
       [:li [:a {:href "#/calendar"} "Calendar"]]
-      [:li [:a {:href "#/recipes"} "Recipes"]]]]]])
+      [:li [:a {:href "#/recipes"} "Recipes"]]]
+     [:p {:class "navbar-text navbar-right"} (@user-data :name) ]]]])
 
 (defn home-page []
   [:div
