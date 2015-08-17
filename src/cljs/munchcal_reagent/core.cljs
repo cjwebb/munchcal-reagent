@@ -1,7 +1,7 @@
 (ns munchcal-reagent.core
     (:require [reagent.core :as reagent :refer [atom]]
               [reagent.session :as session]
-              [secretary.core :as secretary :include-macros true]
+              [secretary.core :as sec :include-macros true]
               [goog.events :as events]
               [goog.history.EventType :as EventType])
     (:import goog.History))
@@ -9,26 +9,70 @@
 ;; -------------------------
 ;; Views
 
-(defn home-page []
-  [:div [:h2 "Welcome to munchcal-reagent"]
-   [:div [:a {:href "#/about"} "go to about page"]]])
+(defn navbar []
+  [:nav {:class "navbar navbar-default navbar-fixed-top"}
+   [:div {:class "container"}
+    [:div {:class "navbar-header"}
+     [:a {:class "navbar-brand" :href "#/"} "MunchCal"]]
+    [:div {:id "navbar" :class "collapse navbar-collapse"}
+     [:ul {:class "nav navbar-nav"}
+      [:li [:a {:href "#/calendar"} "Calendar"]]
+      [:li [:a {:href "#/recipes"} "Recipes"]]]]]])
 
-(defn about-page []
-  [:div [:h2 "About munchcal-reagent"]
-   [:div [:a {:href "#/"} "go to the home page"]]])
+(defn home-page []
+  [:div
+   (navbar)
+   [:div [:h2 "Welcome to Munchcal"]]])
+
+(defn calendar-page []
+  [:div
+   (navbar)
+    [:div [:h2 "Calendar"]]])
+
+(defn recipes-page []
+  [:div
+   (navbar)
+    [:div [:h2 "Recipes"]]])
+
+(defn my-recipes-page []
+  [:div
+   (navbar)
+    [:div [:h2 "My Recipes"]]])
+
+(defn signup-page []
+  [:div
+   (navbar)
+    [:div [:h2 "Sign Up"]]])
+
+(defn login-page []
+  [:div
+   (navbar)
+    [:div [:h2 "Login"]]])
 
 (defn current-page []
   [:div [(session/get :current-page)]])
 
 ;; -------------------------
 ;; Routes
-(secretary/set-config! :prefix "#")
+(sec/set-config! :prefix "#")
 
-(secretary/defroute "/" []
+(sec/defroute "/" []
   (session/put! :current-page #'home-page))
 
-(secretary/defroute "/about" []
-  (session/put! :current-page #'about-page))
+(sec/defroute "/calendar" []
+  (session/put! :current-page #'calendar-page))
+
+(sec/defroute "/recipes" []
+  (session/put! :current-page #'recipes-page))
+
+(sec/defroute "/my/recipes" []
+  (session/put! :current-page #'my-recipes-page))
+
+(sec/defroute "/signup" []
+  (session/put! :current-page #'signup-page))
+
+(sec/defroute "/login" []
+  (session/put! :current-page #'login-page))
 
 ;; -------------------------
 ;; History
@@ -38,7 +82,7 @@
     (events/listen
      EventType/NAVIGATE
      (fn [event]
-       (secretary/dispatch! (.-token event))))
+       (sec/dispatch! (.-token event))))
     (.setEnabled true)))
 
 ;; -------------------------
