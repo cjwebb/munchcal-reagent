@@ -13,13 +13,36 @@
     {:name "Colin"
      :id "6ca2e9c0-f4ed-11e4-b443-353a40402a60"}))
 
+(def placeholder-image "placeholder-448x256.png")
+
+(def today-meals
+  (atom
+    [{:id "1"
+      :name "Peppered Chicken"
+      :image-url placeholder-image
+      :ingredients ["Chicken" "Black Pepper" "Salt"]}
+     {:id "2"
+      :name "Mediterranean Veg"
+      :image-url placeholder-image
+      :ingredients ["Courgette" "Red Pepper" "Onion"]}]))
+
 ;; -------------------------
 ;; Views
 
 (defn navbar []
   [:nav {:class "navbar navbar-default navbar-fixed-top"}
-   [:div {:class "container"}
-    [:div {:class "navbar-header"}
+   [:div.container
+    [:div.navbar-header
+     [:button {:type "button"
+               :class "navbar-toggle collapsed"
+               :data-toggle "collapse"
+               :data-target "#navbar"
+               :aria-expanded "false"
+               :aria-controls "navbar"}
+      [:span.sr-only "Toggle Navigation"]
+      [:span.icon-bar]
+      [:span.icon-bar]
+      [:span.icon-bar]]
      [:a {:class "navbar-brand" :href "#/"} "MunchCal"]]
     [:div {:id "navbar" :class "collapse navbar-collapse"}
      [:ul {:class "nav navbar-nav"}
@@ -27,35 +50,61 @@
       [:li [:a {:href "#/recipes"} "Recipes"]]]
      [:p {:class "navbar-text navbar-right"} (@user-data :name) ]]]])
 
+(defn nice-join [xs]
+  (clojure.string/join ", " xs))
+
+(defn meal-view [meal]
+  [:div.row {:key (:id meal)}
+   [:div.col-md-12
+    [:img {:class "img-responsive" :src (:image-url meal)}]
+    [:h4 (:name meal)]
+    [:ul.list-unstyled
+     (nice-join (:ingredients meal))]]])
+
 (defn home-page []
   [:div
    (navbar)
-   [:div [:h2 "Welcome to Munchcal"]]])
+   [:div.container
+    [:div.page-header
+     [:h1 "Today's Meals"]
+     [:p.lead "Tues 18th Aug"]]
+    (map meal-view @today-meals)]])
 
 (defn calendar-page []
   [:div
    (navbar)
-    [:div [:h2 "Calendar"]]])
+   [:div.container
+    [:h2 "Calendar"]
+    [:p "Displays food for relevant week"]]])
 
 (defn recipes-page []
   [:div
    (navbar)
-    [:div [:h2 "Recipes"]]])
+   [:div.container
+    [:h2 "Recipes"]
+    [:p "Recipe search"]
+    [:p "If signed-in shows your favourites before you search, and search
+        results including your favourites after searching"]
+    [:p "If not signed-in, shows top recipes before you search, and
+        normal results after searching" ]
+    [:a {:href "#/my/recipes"} "My Recipes"]]])
 
 (defn my-recipes-page []
   [:div
    (navbar)
-    [:div [:h2 "My Recipes"]]])
+   [:div.container
+    [:h2 "My Recipes"]
+    [:p "List of my recipes, paginatable, with search"]]])
 
 (defn signup-page []
   [:div
    (navbar)
-    [:div [:h2 "Sign Up"]]])
+   [:div.container [:h2 "Sign Up"]]])
 
 (defn login-page []
   [:div
    (navbar)
-    [:div [:h2 "Login"]]])
+   [:div.container [:h2 "Login"]]])
 
 (defn current-page []
   [:div [(session/get :current-page)]])
