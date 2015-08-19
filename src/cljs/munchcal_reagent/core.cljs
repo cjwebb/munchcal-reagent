@@ -48,18 +48,17 @@
      [:ul {:class "nav navbar-nav"}
       [:li [:a {:href "#/calendar"} "Calendar"]]
       [:li [:a {:href "#/recipes"} "Recipes"]]]
-     [:p {:class "navbar-text navbar-right"} (@user-data :name) ]]]])
+     [:p {:class "navbar-text navbar-right"} (str "Signed in as " (@user-data :name)) ]]]])
 
 (defn nice-join [xs]
   (clojure.string/join ", " xs))
 
 (defn meal-view [meal]
-  [:div.row {:key (:id meal)}
-   [:div.col-md-12
-    [:img {:class "img-responsive" :src (:image-url meal)}]
-    [:h4 (:name meal)]
-    [:ul.list-unstyled
-     (nice-join (:ingredients meal))]]])
+  [:div {:class "col-xs-12 col-md-4"}
+   [:img {:class "img-responsive" :src (:image-url meal)}]
+   [:h4 (:name meal)]
+   [:ul.list-unstyled
+    (nice-join (:ingredients meal))]])
 
 (defn home-page []
   [:div
@@ -68,7 +67,8 @@
     [:div.page-header
      [:h1 "Today's Meals"]
      [:p.lead "Tues 18th Aug"]]
-    (map meal-view @today-meals)]])
+    (map #(vec [:div.row (map meal-view %)])
+         (partition 3 3 nil @today-meals))]])
 
 (defn calendar-page []
   [:div
