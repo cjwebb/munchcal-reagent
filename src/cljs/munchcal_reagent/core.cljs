@@ -3,7 +3,8 @@
               [reagent.session :as session]
               [secretary.core :as sec :include-macros true]
               [goog.events :as events]
-              [goog.history.EventType :as EventType])
+              [goog.history.EventType :as EventType]
+              [ajax.core :as ajax])
     (:import goog.History))
 
 ;; -------------------------
@@ -15,16 +16,28 @@
 
 (def placeholder-image "placeholder-448x256.png")
 
-(def today-meals
+(def todays-meals
   (atom
     [{:id "1"
       :name "Peppered Chicken"
-      :image-url placeholder-image
-      :ingredients ["Chicken" "Black Pepper" "Salt"]}
+      :ingredients [{:name "Chicken"} {:name "Black Pepper"} {:name "Salt"}]}
      {:id "2"
       :name "Mediterranean Veg"
-      :image-url placeholder-image
-      :ingredients ["Courgette" "Red Pepper" "Onion"]}]))
+      :ingredients [{:name "Courgette"} {:name "Red Pepper"} {:name "Onion"}]}]))
+
+(defonce recipes-results
+  (atom []))
+
+(defn error-handler [{:keys [status status-text]}]
+  (.log js/console (str "something bad happened: " status " " status-text)))
+
+(defn get-recipes-results []
+  ; todo - pass in a search term
+  ; todo - configurable endpoint?
+  (ajax/GET "http://localhost:10020/recipes?q=carbonara"
+            {:handler #(reset! recipes-results
+                               (:data (clojure.walk/keywordize-keys %)))
+             :error-handler error-handler}))
 
 ;; -------------------------
 ;; Views
@@ -48,17 +61,22 @@
      [:ul {:class "nav navbar-nav"}
       [:li [:a {:href "#/calendar"} "Calendar"]]
       [:li [:a {:href "#/recipes"} "Recipes"]]]
-     [:p {:class "navbar-text navbar-right"} (str "Signed in as " (@user-data :name)) ]]]])
-
-(defn nice-join [xs]
-  (clojure.string/join ", " xs))
+     [:p {:class "navbar-text navbar-right"}
+      (str "Signed in as " (@user-data :name))]]]])
 
 (defn meal-view [meal]
-  [:div {:class "col-xs-12 col-md-4"}
-   [:img {:class "img-responsive" :src (:image-url meal)}]
+  [:div {:class "col-xs-12 col-md-4" :key (:id meal)}
+   [:img {:class "img-responsive"
+          :src (get-in meal [:image :url] placeholder-image)}]
    [:h4 (:name meal)]
    [:ul.list-unstyled
-    (nice-join (:ingredients meal))]])
+    (clojure.string/join ", " (map :name (:ingredients meal)))]])
+
+(defn render-meals
+  "Render a list of meals, with 3 on each row"
+  [meals]
+  (map #(vec [:div.row {:key (:id (first %))} (map meal-view %)])
+       (partition 3 3 nil meals)))
 
 (defn home-page []
   [:div
@@ -67,8 +85,7 @@
     [:div.page-header
      [:h1 "Today's Meals"]
      [:p.lead "Tues 18th Aug"]]
-    (map #(vec [:div.row (map meal-view %)])
-         (partition 3 3 nil @today-meals))]])
+    (render-meals @todays-meals)]])
 
 (defn calendar-page []
   [:div
@@ -76,6 +93,20 @@
    [:div.container
     [:h2 "Calendar"]
     [:p "Displays food for relevant week"]]])
+
+(defn recipe-search-box []
+  [:div.col-md-12
+   [:form {:method "get"
+           :action "#/recipes"
+           :onSubmit (fn [e]
+                      (.preventDefault e)
+                      (get-recipes-results))}
+    [:div.form-group
+     [:input {:type "text"
+              :class "form-control"
+              :id "q"
+              :name "q"
+              :placeholder "Search for a recipe e.g. Spaghetti Carbonara"}]]]])
 
 (defn recipes-page []
   [:div
@@ -87,7 +118,9 @@
         results including your favourites after searching"]
     [:p "If not signed-in, shows top recipes before you search, and
         normal results after searching" ]
-    [:a {:href "#/my/recipes"} "My Recipes"]]])
+    [:a {:href "#/my/recipes"} "My Recipes"]
+    [:div.row (recipe-search-box)]
+    (render-meals @recipes-results)]])
 
 (defn my-recipes-page []
   [:div
