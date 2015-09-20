@@ -20,10 +20,9 @@
      (include-css (if (env :dev) "css/site.css" "css/site.min.css"))]
     [:body
      [:div#app
-      [:h3 "ClojureScript has not been compiled!"]
-      [:p "please run "
-       [:b "lein figwheel"]
-       " in order to start the compiler"]]
+      [:div.container
+      [:h1 "Loading..."]]]
+     (javascript-tag "var apiUrl='http://localhost:10020';")
      (include-js "js/jquery.min.js")
      (include-js "js/bootstrap.min.js")
      (include-js "js/app.js")]]))
