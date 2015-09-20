@@ -7,23 +7,11 @@
               [ajax.core :as ajax])
     (:import goog.History))
 
+(def api-host "http://localhost:10020")
+
 ;; -------------------------
 ;; State
-(defonce user-data
-  (atom
-    {:name "Colin"
-     :id "6ca2e9c0-f4ed-11e4-b443-353a40402a60"}))
-
 (def placeholder-image "placeholder-448x256.png")
-
-(def todays-meals
-  (atom
-    [{:id "1"
-      :name "Peppered Chicken"
-      :ingredients [{:name "Chicken"} {:name "Black Pepper"} {:name "Salt"}]}
-     {:id "2"
-      :name "Mediterranean Veg"
-      :ingredients [{:name "Courgette"} {:name "Red Pepper"} {:name "Onion"}]}]))
 
 (defonce recipes-results
   (atom []))
@@ -33,36 +21,18 @@
 
 (defn get-recipes-results []
   ; todo - pass in a search term
-  ; todo - configurable endpoint?
-  (ajax/GET "http://localhost:10020/recipes?q=carbonara"
+  (ajax/GET (str api-host "/recipes?q=chicken&from=0&limit=9")
             {:handler #(reset! recipes-results
                                (:data (clojure.walk/keywordize-keys %)))
              :error-handler error-handler}))
 
 ;; -------------------------
 ;; Views
-
 (defn navbar []
   [:nav {:class "navbar navbar-default navbar-fixed-top"}
    [:div.container
     [:div.navbar-header
-     [:button {:type "button"
-               :class "navbar-toggle collapsed"
-               :data-toggle "collapse"
-               :data-target "#navbar"
-               :aria-expanded "false"
-               :aria-controls "navbar"}
-      [:span.sr-only "Toggle Navigation"]
-      [:span.icon-bar]
-      [:span.icon-bar]
-      [:span.icon-bar]]
-     [:a {:class "navbar-brand" :href "#/"} "MunchCal"]]
-    [:div {:id "navbar" :class "collapse navbar-collapse"}
-     [:ul {:class "nav navbar-nav"}
-      [:li [:a {:href "#/calendar"} "Calendar"]]
-      [:li [:a {:href "#/recipes"} "Recipes"]]]
-     [:p {:class "navbar-text navbar-right"}
-      (str "Signed in as " (@user-data :name))]]]])
+     [:a {:class "navbar-brand" :href "#/"} "MunchCal"]]]])
 
 (defn meal-view [meal]
   [:div {:class "col-xs-12 col-md-4" :key (:id meal)}
@@ -74,95 +44,57 @@
 
 (defn render-meals
   "Render a list of meals, with 3 on each row"
-  [meals]
-  (map #(vec [:div.row {:key (:id (first %))} (map meal-view %)])
-       (partition 3 3 nil meals)))
+  [meals-atom]
+  (let [meals @meals-atom
+        threes (partition 3 3 nil meals)]
+    (map #(vec [:div.row
+                 {:key (:id (first %))}
+                 (map meal-view %)])
+         threes)))
 
-(defn home-page []
+(defn handle-search-submit [e]
+  (do
+    (.log js/console e)
+    (get-recipes-results)
+    (.preventDefault e)))
+
+(defn recipe-search-box []
+  [:div.col-md-12
+   [:div#custom-search-input
+   [:form {:method "get"
+           :action "#/recipes"
+           :onSubmit handle-search-submit}
+    [:div.form-group
+     [:div {:class "input-group col-md-12"}
+      [:input {:type "text"
+               :class "form-control"
+               :id "q"
+               :name "q"
+               :placeholder "Search for a recipe e.g. Sandwich"}]
+      [:span.input-group-btn
+       [:button {:class "btn btn-info btn-lg"
+                 :type "submit"}
+        [:i {:class "glyphicon glyphicon-search"}]]]]]]]])
+
+(defn recipes-page [search-term]
   [:div
    (navbar)
    [:div.container
     [:div.page-header
-     [:h1 "Today's Meals"]
-     [:p.lead "Tues 18th Aug"]]
-    (render-meals @todays-meals)]])
-
-(defn calendar-page []
-  [:div
-   (navbar)
-   [:div.container
-    [:h2 "Calendar"]
-    [:p "Displays food for relevant week"]]])
-
-(defn recipe-search-box []
-  [:div.col-md-12
-   [:form {:method "get"
-           :action "#/recipes"
-           :onSubmit (fn [e]
-                      (.preventDefault e)
-                      (get-recipes-results))}
-    [:div.form-group
-     [:input {:type "text"
-              :class "form-control"
-              :id "q"
-              :name "q"
-              :placeholder "Search for a recipe e.g. Spaghetti Carbonara"}]]]])
-
-(defn recipes-page []
-  [:div
-   (navbar)
-   [:div.container
-    [:h2 "Recipes"]
-    [:p "Recipe search"]
-    [:p "If signed-in shows your favourites before you search, and search
-        results including your favourites after searching"]
-    [:p "If not signed-in, shows top recipes before you search, and
-        normal results after searching" ]
-    [:a {:href "#/my/recipes"} "My Recipes"]
+     [:h1 "Recipes"]
+     [:p.lead "Search and Discover"]]
     [:div.row (recipe-search-box)]
-    (render-meals @recipes-results)]])
-
-(defn my-recipes-page []
-  [:div
-   (navbar)
-   [:div.container
-    [:h2 "My Recipes"]
-    [:p "List of my recipes, paginatable, with search"]]])
-
-(defn signup-page []
-  [:div
-   (navbar)
-   [:div.container [:h2 "Sign Up"]]])
-
-(defn login-page []
-  [:div
-   (navbar)
-   [:div.container [:h2 "Login"]]])
+    (render-meals recipes-results)]])
 
 (defn current-page []
-  [:div [(session/get :current-page)]])
+  (session/get :current-page))
 
 ;; -------------------------
 ;; Routes
 (sec/set-config! :prefix "#")
 
-(sec/defroute "/" []
-  (session/put! :current-page #'home-page))
-
-(sec/defroute "/calendar" []
-  (session/put! :current-page #'calendar-page))
-
-(sec/defroute "/recipes" []
-  (session/put! :current-page #'recipes-page))
-
-(sec/defroute "/my/recipes" []
-  (session/put! :current-page #'my-recipes-page))
-
-(sec/defroute "/signup" []
-  (session/put! :current-page #'signup-page))
-
-(sec/defroute "/login" []
-  (session/put! :current-page #'login-page))
+(sec/defroute "/" [{:keys [query-params]}]
+  (session/put! :current-page recipes-page ))
 
 ;; -------------------------
 ;; History
@@ -177,9 +109,13 @@
 
 ;; -------------------------
 ;; Initialize app
+(defn initialize-touch []
+  (.initializeTouchEvents js/React true))
+
 (defn mount-root []
   (reagent/render [current-page] (.getElementById js/document "app")))
 
 (defn init! []
   (hook-browser-navigation!)
+  (initialize-touch)
   (mount-root))
