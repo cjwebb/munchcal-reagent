@@ -5,6 +5,7 @@
               [goog.events :as events]
               [goog.history.EventType :as EventType]
               [ajax.core :as ajax])
+    (:use [clojure.walk :only [keywordize-keys]])
     (:import goog.History))
 
 (def api-host "http://localhost:10020")
@@ -13,6 +14,12 @@
 ;; State
 (def placeholder-image "placeholder-448x256.png")
 
+(defonce recipes-search-params
+  (atom {:q nil :from nil}))
+
+(defn set-value! [value]
+  (swap! recipes-search-params assoc :q value))
+
 (defonce recipes-results
   (atom []))
 
@@ -20,11 +27,12 @@
   (.log js/console (str "something bad happened: " status " " status-text)))
 
 (defn get-recipes-results []
-  ; todo - pass in a search term
-  (ajax/GET (str api-host "/recipes?q=chicken&from=0&limit=9")
-            {:handler #(reset! recipes-results
-                               (:data (clojure.walk/keywordize-keys %)))
-             :error-handler error-handler}))
+  (let [q (:q @recipes-search-params)]
+    (when (not (clojure.string/blank? q))
+      (ajax/GET (str api-host "/recipes?q=" q)
+                {:handler #(reset! recipes-results
+                                   (:data (keywordize-keys %)))
+                 :error-handler error-handler}))))
 
 ;; -------------------------
 ;; Views
@@ -35,12 +43,14 @@
      [:a {:class "navbar-brand" :href "#/"} "MunchCal"]]]])
 
 (defn meal-view [meal]
-  [:div {:class "col-xs-12 col-md-4" :key (:id meal)}
+  [:div {:class "meal-view col-xs-12 col-md-4" :key (:id meal)}
+   [:a {:href (get-in meal [:source :url])
+        :target "_blank"}
    [:img {:class "img-responsive"
           :src (get-in meal [:image :url] placeholder-image)}]
    [:h4 (:name meal)]
    [:ul.list-unstyled
-    (clojure.string/join ", " (map :name (:ingredients meal)))]])
+    (clojure.string/join ", " (map :name (:ingredients meal)))]]])
 
 (defn render-meals
   "Render a list of meals, with 3 on each row"
@@ -54,7 +64,6 @@
 
 (defn handle-search-submit [e]
   (do
-    (.log js/console e)
     (get-recipes-results)
     (.preventDefault e)))
 
@@ -70,7 +79,8 @@
                :class "form-control"
                :id "q"
                :name "q"
-               :placeholder "Search for a recipe e.g. Sandwich"}]
+               :placeholder "Search for a recipe e.g. Sandwich"
+               :on-change #(set-value! (-> % .-target .-value))}]
       [:span.input-group-btn
        [:button {:class "btn btn-info btn-lg"
                  :type "submit"}
