@@ -103,7 +103,7 @@
 ;; Routes
 (sec/set-config! :prefix "#")
 
-(sec/defroute "/" [{:keys [query-params]}]
+(sec/defroute "/" []
   (session/put! :current-page recipes-page ))
 
 ;; -------------------------

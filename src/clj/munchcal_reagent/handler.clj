@@ -22,7 +22,6 @@
      [:div#app
       [:div.container
       [:h1 "Loading..."]]]
-     (javascript-tag "var apiUrl='http://localhost:10020';")
      (include-js "js/jquery.min.js")
      (include-js "js/bootstrap.min.js")
      (include-js "js/app.js")]]))
