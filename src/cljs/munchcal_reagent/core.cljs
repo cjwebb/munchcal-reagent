@@ -4,11 +4,15 @@
               [secretary.core :as sec :include-macros true]
               [goog.events :as events]
               [goog.history.EventType :as EventType]
-              [ajax.core :as ajax])
+              [ajax.core :as ajax]
+              [munchcal-reagent.about :as about])
     (:use [clojure.walk :only [keywordize-keys]])
     (:import goog.History))
 
-(def api-host "http://localhost:10020")
+(defonce api-url
+  (-> (.getElementById js/document "server-originated-data")
+      (.getAttribute "api-url")
+      (cljs.reader/read-string)))
 
 ;; -------------------------
 ;; State
@@ -29,7 +33,7 @@
 (defn get-recipes-results []
   (let [q (:q @recipes-search-params)]
     (when (not (clojure.string/blank? q))
-      (ajax/GET (str api-host "/recipes?q=" q)
+      (ajax/GET (str api-url "/recipes?q=" q)
                 {:handler #(reset! recipes-results
                                    (:data (keywordize-keys %)))
                  :error-handler error-handler}))))
@@ -40,7 +44,20 @@
   [:nav {:class "navbar navbar-default navbar-fixed-top"}
    [:div.container
     [:div.navbar-header
-     [:a {:class "navbar-brand" :href "#/"} "MunchCal"]]]])
+     [:button {:type "button"
+               :class "navbar-toggle collapsed"
+               :data-toggle "collapse"
+               :data-target "#navbar"
+               :aria-expanded "false"
+               :aria-controls "navbar"}
+      [:span.sr-only "Toggle Navigation"]
+      [:span.icon-bar]
+      [:span.icon-bar]
+      [:span.icon-bar]]
+     [:a {:class "navbar-brand" :href "#/"} "MunchCal"]]
+    [:div {:id "navbar" :class "collapse navbar-collapse"}
+     [:ul {:class "nav navbar-nav"}
+      [:li [:a {:href "#/about"} "About"]]]]]])
 
 (defn meal-view [meal]
   [:div {:class "meal-view col-xs-12 col-md-4" :key (:id meal)}
@@ -86,7 +103,7 @@
                  :type "submit"}
         [:i {:class "glyphicon glyphicon-search"}]]]]]]]])
 
-(defn recipes-page [search-term]
+(defn recipes-page []
   [:div
    (navbar)
    [:div.container
@@ -96,15 +113,28 @@
     [:div.row (recipe-search-box)]
     (render-meals recipes-results)]])
 
+(defn about-page []
+  [:div
+   (navbar)
+   [:div.container
+    [:div.page-header
+     [:h1 "About"]
+     [:p.lead "Your Kitchen AI"]]
+     (about/text)]])
+
 (defn current-page []
-  (session/get :current-page))
+  [:div [(session/get :current-page)]])
+  ;(session/get :current-page))
 
 ;; -------------------------
 ;; Routes
 (sec/set-config! :prefix "#")
 
 (sec/defroute "/" []
-  (session/put! :current-page recipes-page ))
+  (session/put! :current-page #'recipes-page))
+
+(sec/defroute "/about" []
+  (session/put! :current-page #'about-page))
 
 ;; -------------------------
 ;; History

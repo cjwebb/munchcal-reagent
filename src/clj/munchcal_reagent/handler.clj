@@ -8,6 +8,9 @@
             [ring.middleware.reload :refer [wrap-reload]]
             [environ.core :refer [env]]))
 
+(def api-url
+  (env :munchcal-api-url))
+
 (def home-page
   (html
    [:html
@@ -22,6 +25,9 @@
      [:div#app
       [:div.container
       [:h1 "Loading..."]]]
+     [:div {:id "server-originated-data"
+            :style "display: none;"
+            :api-url api-url}]
      (include-js "js/jquery.min.js")
      (include-js "js/bootstrap.min.js")
      (include-js "js/app.js")]]))
