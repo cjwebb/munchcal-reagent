@@ -7,6 +7,7 @@ body {
   border: 0px solid transparent;
 }
 
+/* Search Box */
 #custom-search-input {
     padding: 3px;
     border: solid 1px #E4E4E4;
@@ -51,6 +52,7 @@ body {
     margin-bottom: 20px;
 }
 
+/* Meal View */
 .meal-view {
     margin-bottom: 20px;
 }
@@ -60,3 +62,14 @@ body {
     text-decoration: none;
     color: #333;
 }
+
+/* Nav Bar */
+.navbar-text a {
+    color: #777;
+    text-decoration: none;
+}
+.navbar-text a:hover {
+    color:#333;
+    background-color:transparent
+}
+

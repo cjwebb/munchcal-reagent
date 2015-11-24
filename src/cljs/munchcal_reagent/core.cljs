@@ -1,14 +1,19 @@
 (ns munchcal-reagent.core
     (:require [reagent.core :as reagent :refer [atom]]
+              [reagent-forms.core :refer [bind-fields]]
               [reagent.session :as session]
               [secretary.core :as sec :include-macros true]
               [goog.events :as events]
               [goog.history.EventType :as EventType]
               [ajax.core :as ajax]
-              [munchcal-reagent.about :as about])
+              [munchcal-reagent.about :as about]
+              [munchcal-reagent.auth :as auth]
+              [munchcal-reagent.navbar :as navbar]
+              [munchcal-reagent.planner :as planner])
     (:use [clojure.walk :only [keywordize-keys]])
     (:import goog.History))
 
+; todo - move to utils
 (defonce api-url
   (-> (.getElementById js/document "server-originated-data")
       (.getAttribute "api-url")
@@ -40,25 +45,6 @@
 
 ;; -------------------------
 ;; Views
-(defn navbar []
-  [:nav {:class "navbar navbar-default navbar-fixed-top"}
-   [:div.container
-    [:div.navbar-header
-     [:button {:type "button"
-               :class "navbar-toggle collapsed"
-               :data-toggle "collapse"
-               :data-target "#navbar"
-               :aria-expanded "false"
-               :aria-controls "navbar"}
-      [:span.sr-only "Toggle Navigation"]
-      [:span.icon-bar]
-      [:span.icon-bar]
-      [:span.icon-bar]]
-     [:a {:class "navbar-brand" :href "#/"} "MunchCal"]]
-    [:div {:id "navbar" :class "collapse navbar-collapse"}
-     [:ul {:class "nav navbar-nav"}
-      [:li [:a {:href "#/about"} "About"]]]]]])
-
 (defn meal-view [meal]
   [:div {:class "meal-view col-xs-12 col-md-4" :key (:id meal)}
    [:a {:href (get-in meal [:source :url])
@@ -105,7 +91,7 @@
 
 (defn recipes-page []
   [:div
-   (navbar)
+   (navbar/render)
    [:div.container
     [:div.page-header
      [:h1 "Recipes"]
@@ -115,19 +101,20 @@
 
 (defn about-page []
   [:div
-   (navbar)
+   (navbar/render)
    [:div.container
     [:div.page-header
      [:h1 "About"]
      [:p.lead "Your Kitchen AI"]]
      (about/text)]])
 
-(defn current-page []
-  [:div [(session/get :current-page)]])
-  ;(session/get :current-page))
-
 ;; -------------------------
 ;; Routes
+
+; todo - move navbar back into here
+(defn current-page []
+  [:div [(session/get :current-page)]])
+
 (sec/set-config! :prefix "#")
 
 (sec/defroute "/" []
@@ -136,9 +123,17 @@
 (sec/defroute "/about" []
   (session/put! :current-page #'about-page))
 
+(sec/defroute "/login" []
+  (session/put! :current-page #'auth/login-page))
+
+(sec/defroute "/logout" []
+  (auth/logout))
+
+(sec/defroute "/planner" []
+  (session/put! :current-page #'planner/dashboard))
+
 ;; -------------------------
-;; History
-;; must be called after routes have been defined
+;; Initialize app
 (defn hook-browser-navigation! []
   (doto (History.)
     (events/listen
@@ -147,8 +142,6 @@
        (sec/dispatch! (.-token event))))
     (.setEnabled true)))
 
-;; -------------------------
-;; Initialize app
 (defn initialize-touch []
   (.initializeTouchEvents js/React true))
 
@@ -158,4 +151,7 @@
 (defn init! []
   (hook-browser-navigation!)
   (initialize-touch)
+  (auth/check-auth-token)
+  (planner/fetch-recipes)
   (mount-root))
+
