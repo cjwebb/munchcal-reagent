@@ -18,6 +18,9 @@
 ;; State
 (def placeholder-image "placeholder-448x256.png")
 
+(defonce user-has-searched?
+  (atom false))
+
 (defonce recipes-search-params
   (atom {:q nil :from nil}))
 
@@ -27,6 +30,9 @@
 (defonce recipes-results
   (atom []))
 
+(defonce recipe-suggestions
+  (atom []))
+
 (defn error-handler [{:keys [status status-text]}]
   (.log js/console (str "something bad happened: " status " " status-text)))
 
@@ -34,9 +40,19 @@
   (let [q (:q @recipes-search-params)]
     (when (not (clojure.string/blank? q))
       (ajax/GET (str api-url "/recipes?q=" q)
-                {:handler #(reset! recipes-results
-                                   (:data (keywordize-keys %)))
+                {:handler #(do (reset! user-has-searched? true)
+                               (reset! recipes-results
+                                       (:data (keywordize-keys %))))
                  :error-handler error-handler}))))
+
+(defn get-recipe-suggestions []
+  (ajax/GET (str api-url "/recipes/random?limit=3")
+            {:handler #(reset! recipe-suggestions
+                               (:data (keywordize-keys %)))
+             :error-handler error-handler}))
+
+(add-watch recipes-results
+           :watch-change #(cond (nil? (:data %4)) (get-recipe-suggestions)))
 
 ;; -------------------------
 ;; Views
@@ -71,9 +87,8 @@
 
 (defn render-meals
   "Render a list of meals, with 3 on each row"
-  [meals-atom]
-  (let [meals @meals-atom
-        threes (partition 3 3 nil meals)]
+  [meals]
+  (let [threes (partition 3 3 nil meals)]
     (map #(vec [:div.row
                  {:key (:id (first %))}
                  (map meal-view %)])
@@ -103,6 +118,23 @@
                  :type "submit"}
         [:i {:class "glyphicon glyphicon-search"}]]]]]]]])
 
+(defn display-suggestions []
+  (let [h1 (if @user-has-searched? "No Results" "Suggestions")
+        lead (if @user-has-searched?
+               "Try some randomised recipes instead..."
+               "Randomised, just for you")]
+    [:div.page-header {:class "suggestions" }
+      [:h1 h1]
+      [:p.lead lead]
+      (render-meals @recipe-suggestions)]))
+
+(defn display-recipes []
+  (let [meals @recipes-results]
+    (if (not (empty? meals))
+      (render-meals meals)
+      (display-suggestions))))
+; have a 'more' button, to refresh them?
+
 (defn recipes-page []
   [:div
    (navbar)
@@ -111,7 +143,7 @@
      [:h1 "Recipes"]
      [:p.lead "Search and Discover"]]
     [:div.row (recipe-search-box)]
-    (render-meals recipes-results)]])
+    (display-recipes)]])
 
 (defn about-page []
   [:div
@@ -124,7 +156,6 @@
 
 (defn current-page []
   [:div [(session/get :current-page)]])
-  ;(session/get :current-page))
 
 ;; -------------------------
 ;; Routes
@@ -158,4 +189,6 @@
 (defn init! []
   (hook-browser-navigation!)
   (initialize-touch)
-  (mount-root))
+  (mount-root)
+  (get-recipe-suggestions))
+

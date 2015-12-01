@@ -60,3 +60,8 @@ body {
     text-decoration: none;
     color: #333;
 }
+
+.suggestions {
+    border-top: solid 1px #eee;
+    margin-top: 0;
+}
